@@ -1,0 +1,161 @@
+#VRML_SIM R2023b utf8
+
+WorldInfo {
+  basicTimeStep 16
+}
+
+Viewpoint {
+  orientation 0.339 0.879 0.335 1.314
+  position 1.7 1.2 1.1
+}
+
+TexturedBackground {
+}
+
+TexturedBackgroundLight {
+}
+
+Robot {
+  translation 0 0 0
+  controller "conveyor_controller"
+  supervisor TRUE
+  children [
+    DEF BASE Solid {
+      translation 0 0 0
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.15 0.15 0.15
+            roughness 0.5
+          }
+          geometry Box {
+            size 1.5 0.45 0.04
+          }
+        }
+      ]
+      boundingObject Box {
+        size 1.5 0.45 0.04
+      }
+    }
+
+    DEF RODILLO_INICIO Solid {
+      translation -0.7 0 0.06
+      rotation 1 0 0 1.5708
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.55 0.55 0.55
+            roughness 0.4
+          }
+          geometry Cylinder {
+            radius 0.05
+            height 0.45
+          }
+        }
+      ]
+    }
+
+    DEF RODILLO_FINAL Solid {
+      translation 0.7 0 0.06
+      rotation 1 0 0 1.5708
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.55 0.55 0.55
+            roughness 0.4
+          }
+          geometry Cylinder {
+            radius 0.05
+            height 0.45
+          }
+        }
+      ]
+    }
+
+    DEF BANDA Solid {
+      translation 0 0 0.08
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.02 0.02 0.02
+            roughness 0.7
+          }
+          geometry Box {
+            size 1.4 0.42 0.025
+          }
+        }
+      ]
+    }
+
+    DEF CAJA Solid {
+      translation -0.45 0 0.18
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 0.8 0.35 0.1
+            roughness 0.5
+          }
+          geometry Box {
+            size 0.13 0.13 0.13
+          }
+        }
+      ]
+    }
+
+    DEF MARCA_1 Solid {
+      translation -0.55 -0.18 0.105
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 1
+          }
+          geometry Box {
+            size 0.07 0.025 0.01
+          }
+        }
+      ]
+    }
+
+    DEF MARCA_2 Solid {
+      translation -0.2 -0.18 0.105
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 1
+          }
+          geometry Box {
+            size 0.07 0.025 0.01
+          }
+        }
+      ]
+    }
+
+    DEF MARCA_3 Solid {
+      translation 0.2 -0.18 0.105
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 1
+          }
+          geometry Box {
+            size 0.07 0.025 0.01
+          }
+        }
+      ]
+    }
+
+    DEF MARCA_4 Solid {
+      translation 0.55 -0.18 0.105
+      children [
+        Shape {
+          appearance PBRAppearance {
+            baseColor 1 1 1
+          }
+          geometry Box {
+            size 0.07 0.025 0.01
+          }
+        }
+      ]
+    }
+  ]
+}
