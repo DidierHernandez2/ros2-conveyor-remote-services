@@ -1,4 +1,30 @@
-/build
-/log
-/install
-/venv
+# ROS2
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+
+# VSCode
+.vscode/
+
+# Linux
+*.swp
+.DS_Store
+
+# Webots cache
+.webots/
+
+# Colcon
+.colcon/
+
+# FastAPI
+*.db

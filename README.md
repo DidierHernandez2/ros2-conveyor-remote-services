@@ -1,19 +1,18 @@
-# Sistema Conveyor Digital Twin — ROS2 Jazzy + Dashboard Remoto + Webots
+# ROS2 Conveyor Remote Services
 
-## Descripción
+Sistema de servicios remotos para una banda transportadora usando **ROS2 Jazzy**, **FastAPI**, **WebSockets** y **Webots**.
 
-Este proyecto implementa un sistema modular para supervisar y simular una banda transportadora real usando:
+Este repositorio contiene únicamente la parte que corre en la **laptop con Ubuntu 24.04 + ROS2 Jazzy**:
 
-- ROS2 Jazzy
-- FastAPI
-- WebSocket
-- Webots
 - Dashboard remoto
-- Simulación tipo Digital Twin
-- Comunicación HTTP con una computadora en ROS2 Humble
+- Servidor HTTP/API
+- WebSocket para telemetría en tiempo real
+- Simulación Webots tipo Digital Twin
+- Publicación local de tópicos ROS2 para la simulación
+- Recepción de datos enviados desde otra computadora/servicio remoto
 
-La laptop con **Ubuntu 24.04 + ROS2 Jazzy** ejecuta el dashboard y la simulación.  
-La computadora con **ROS2 Humble** controla la banda real y manda datos hacia este sistema.
+> Este repositorio **no contiene el control físico del hardware real**.  
+> El control físico de la banda se ejecuta en otra computadora, por ejemplo una Jetson con ROS2 Humble.
 
 ---
 
@@ -21,61 +20,60 @@ La computadora con **ROS2 Humble** controla la banda real y manda datos hacia es
 
 ```text
 Laptop Ubuntu 24.04 + ROS2 Jazzy
-Repositorio clonado
+Repositorio: ros2-conveyor-remote-services
 
-├── src/
-│   ├── conveyor_dashboard_remote/
-│   └── conveyor_sim/
+├── Dashboard Web
+├── API FastAPI
+├── WebSocket
+├── Webots Digital Twin
 │
-├── python_requirements.txt
-└── jazzy_requirements.txt
+├── Publica:
+│   ├── /conveyor/cmd
+│   └── /conveyor/telemetry
+│
+└── Expone endpoints:
+    ├── GET  /
+    ├── POST /cmd
+    ├── GET  /api/commands
+    ├── POST /api/telemetry
+    ├── POST /api/frame
+    ├── GET  /api/status
+    ├── GET  /video
+    └── WS   /ws
 ```
 
-Flujo de comunicación:
+La computadora remota que controla la banda real puede comunicarse con este repositorio usando HTTP:
 
 ```text
-Dashboard Web
-     │
-     ▼
-FastAPI / WebSocket
-     │
-     ├── Publica /conveyor/cmd
-     ├── Publica /conveyor/telemetry
-     ├── Expone /api/commands
-     ├── Recibe /api/telemetry
-     └── Recibe /api/frame
+Servicio remoto / ROS2 Humble
 
-     │
-     ▼
-
-Webots Digital Twin
-     │
-     ├── Escucha /conveyor/cmd
-     └── Escucha /conveyor/telemetry
-
-
-ROS2 Humble / Banda real
-     │
-     ├── Consulta comandos desde /api/commands
-     ├── Manda telemetría a /api/telemetry
-     └── Manda cámara a /api/frame
+GET  /api/commands      -> lee comandos pendientes
+POST /api/telemetry     -> manda telemetría al dashboard y a Webots
+POST /api/frame         -> manda imagen JPEG para el dashboard
 ```
 
 ---
 
 # Requisitos
 
+## Sistema recomendado
+
 - Ubuntu 24.04
-- ROS2 Jazzy
-- Python 3
+- ROS2 Jazzy Jalisco
+- Python 3.12
 - Git
 - Webots
+
+## Paquetes principales
+
+- `conveyor_dashboard_remote`
+- `conveyor_sim`
 
 ---
 
 # Instalación desde cero
 
-## 1. Instalar dependencias base del sistema
+## 1. Instalar dependencias base
 
 ```bash
 sudo apt update
@@ -95,83 +93,82 @@ sudo apt install -y \
 
 ## 2. Inicializar rosdep
 
-Si nunca se ha inicializado `rosdep` en la computadora:
+Si es la primera vez que usas `rosdep` en esta computadora:
 
 ```bash
 sudo rosdep init
 ```
 
-Después ejecutar:
+Después ejecuta:
 
 ```bash
 rosdep update
 ```
 
-Si `sudo rosdep init` dice que ya existe, no pasa nada. Continúa con `rosdep update`.
+Si `sudo rosdep init` indica que ya fue inicializado, no hay problema. Continúa con `rosdep update`.
 
 ---
 
-## 3. Clonar repositorio
+# Clonar el repositorio
 
-Desde cualquier carpeta donde se quiera guardar el proyecto:
-
-```bash
-git clone https://github.com/TU_USUARIO/TU_REPOSITORIO.git
-```
-
-Entrar al repositorio clonado:
+Ubícate en la carpeta donde quieras guardar el proyecto:
 
 ```bash
-cd TU_REPOSITORIO
+git clone https://github.com/DidierHernandez2/ros2-conveyor-remote-services.git
 ```
 
-A partir de este punto, el repositorio clonado será el workspace ROS2.
+Entra al repositorio:
 
-La estructura debe verse similar a:
+```bash
+cd ros2-conveyor-remote-services
+```
+
+Este repositorio funciona directamente como workspace ROS2 porque contiene la carpeta:
 
 ```text
-TU_REPOSITORIO/
+src/
+```
+
+La estructura esperada es:
+
+```text
+ros2-conveyor-remote-services/
 ├── src/
+│   ├── conveyor_dashboard_remote/
+│   └── conveyor_sim/
+│
 ├── python_requirements.txt
-└── jazzy_requirements.txt
+├── jazzy_requirements.txt
+├── README.md
+└── .gitignore
 ```
 
 ---
 
-# Configuración de Python
+# Crear entorno virtual de Python
 
-Ubuntu 24 no permite instalar paquetes Python globalmente con `pip`.  
-Por eso se debe usar un entorno virtual (`venv`) dentro del repositorio.
+Ubuntu 24 no permite instalar paquetes globales con `pip` sin romper el entorno del sistema.  
+Por eso se usa un entorno virtual.
 
----
-
-## 4. Crear entorno virtual
-
-Dentro del repositorio clonado:
+Desde la raíz del repositorio:
 
 ```bash
 python3 -m venv venv
 ```
 
----
-
-## 5. Activar entorno virtual
+Activar el entorno virtual:
 
 ```bash
 source venv/bin/activate
 ```
 
-Si se activó correctamente, aparecerá algo como:
+Cuando esté activo, en la terminal debe aparecer algo parecido a:
 
 ```text
 (venv)
 ```
 
-al inicio de la terminal.
-
----
-
-## 6. Actualizar pip
+Actualizar `pip`:
 
 ```bash
 pip install --upgrade pip
@@ -179,47 +176,60 @@ pip install --upgrade pip
 
 ---
 
-## 7. Instalar dependencias Python
+# Instalar dependencias Python
+
+Con el entorno virtual activado:
 
 ```bash
 pip install -r python_requirements.txt
 ```
 
+Ejemplo de dependencias que puede contener `python_requirements.txt`:
+
+```text
+fastapi
+uvicorn
+requests
+pillow
+```
+
 ---
 
-# Configuración ROS2 Jazzy
+# Instalar dependencias ROS2 Jazzy
 
-## 8. Activar ROS2 Jazzy
+Primero activa ROS2 Jazzy:
 
 ```bash
 source /opt/ros/jazzy/setup.bash
 ```
 
----
-
-## 9. Instalar dependencias ROS2 del proyecto
-
-Desde la raíz del repositorio clonado:
+Luego instala dependencias ROS2 usando `rosdep`:
 
 ```bash
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
----
-
-# Compilar proyecto
-
-## 10. Compilar workspace
-
-Desde la raíz del repositorio clonado:
+Si además quieres instalar dependencias listadas en `jazzy_requirements.txt` mediante `apt`, puedes usar:
 
 ```bash
+sudo apt update
+sudo apt install -y $(cat jazzy_requirements.txt)
+```
+
+---
+
+# Compilar el proyecto
+
+Desde la raíz del repositorio:
+
+```bash
+source venv/bin/activate
+source /opt/ros/jazzy/setup.bash
+
 colcon build --symlink-install
 ```
 
----
-
-## 11. Activar workspace compilado
+Después de compilar:
 
 ```bash
 source install/setup.bash
@@ -227,36 +237,28 @@ source install/setup.bash
 
 ---
 
-# Comandos que se deben ejecutar en cada terminal nueva
+# Comandos necesarios en cada terminal nueva
 
-Cada vez que se abra una terminal nueva para usar este proyecto:
+Cada vez que abras una terminal nueva para trabajar con este proyecto:
 
 ```bash
-cd RUTA/AL/REPOSITORIO_CLONADO
+cd ros2-conveyor-remote-services
 
 source venv/bin/activate
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
 
-Ejemplo:
-
-```bash
-cd ~/Documentos/TU_REPOSITORIO
-
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-```
+Si el repositorio está en otra ruta, reemplaza `ros2-conveyor-remote-services` por la ruta correcta.
 
 ---
 
-# Ejecutar dashboard remoto
+# Ejecutar el dashboard remoto
 
-Abrir una terminal y ejecutar:
+En una terminal:
 
 ```bash
-cd RUTA/AL/REPOSITORIO_CLONADO
+cd ros2-conveyor-remote-services
 
 source venv/bin/activate
 source /opt/ros/jazzy/setup.bash
@@ -265,7 +267,7 @@ source install/setup.bash
 ros2 launch conveyor_dashboard_remote dashboard_remote.launch.py
 ```
 
-Abrir en el navegador:
+Abrir en navegador:
 
 ```text
 http://localhost:8000
@@ -273,12 +275,12 @@ http://localhost:8000
 
 ---
 
-# Ejecutar simulación Webots
+# Ejecutar la simulación Webots
 
-Abrir otra terminal y ejecutar:
+En otra terminal:
 
 ```bash
-cd RUTA/AL/REPOSITORIO_CLONADO
+cd ros2-conveyor-remote-services
 
 source venv/bin/activate
 source /opt/ros/jazzy/setup.bash
@@ -289,39 +291,116 @@ ros2 launch conveyor_sim conveyor_sim.launch.py
 
 ---
 
-# Ver tópicos ROS2
+# Ejecutar dashboard y simulación al mismo tiempo
 
-## Ver todos los tópicos
+## Terminal 1 — Dashboard
 
 ```bash
-ros2 topic list
+cd ros2-conveyor-remote-services
+
+source venv/bin/activate
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch conveyor_dashboard_remote dashboard_remote.launch.py
+```
+
+## Terminal 2 — Webots
+
+```bash
+cd ros2-conveyor-remote-services
+
+source venv/bin/activate
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+ros2 launch conveyor_sim conveyor_sim.launch.py
 ```
 
 ---
 
-## Ver comandos de la banda
+# Tópicos ROS2 usados
 
-```bash
-ros2 topic echo /conveyor/cmd
+## Comandos de banda
+
+```text
+/conveyor/cmd
 ```
 
+Este tópico recibe comandos generados desde el dashboard.  
+También lo usa la simulación para saber si debe avanzar, detenerse o cambiar de dirección.
+
 ---
 
-## Ver telemetría de la banda
+## Telemetría
 
-```bash
-ros2 topic echo /conveyor/telemetry
+```text
+/conveyor/telemetry
 ```
 
----
-
-# Pruebas locales sin Humble
-
-Estas pruebas permiten verificar que el dashboard y la simulación funcionan aunque todavía no esté conectada la computadora con Humble.
+Este tópico recibe datos de telemetría enviados desde el endpoint `/api/telemetry`.  
+La simulación usa esta información para comportarse como Digital Twin.
 
 ---
 
-## Probar telemetría falsa
+# Endpoints disponibles
+
+El dashboard remoto expone los siguientes endpoints:
+
+## Dashboard web
+
+```text
+GET /
+```
+
+Abre la interfaz web principal.
+
+---
+
+## Enviar comando
+
+```text
+POST /cmd
+```
+
+Ejemplo:
+
+```bash
+curl -X POST http://localhost:8000/cmd \
+  -H "Content-Type: application/json" \
+  -d '{"action":"forward"}'
+```
+
+Este endpoint:
+
+1. Guarda el comando en una cola para que un servicio remoto pueda consultarlo.
+2. Publica localmente el comando en `/conveyor/cmd`.
+
+---
+
+## Consultar comandos pendientes
+
+```text
+GET /api/commands?after=0
+```
+
+Ejemplo:
+
+```bash
+curl "http://localhost:8000/api/commands?after=0"
+```
+
+Este endpoint lo puede usar una computadora remota para leer comandos generados desde el dashboard.
+
+---
+
+## Recibir telemetría
+
+```text
+POST /api/telemetry
+```
+
+Ejemplo:
 
 ```bash
 curl -X POST http://localhost:8000/api/telemetry \
@@ -336,7 +415,91 @@ curl -X POST http://localhost:8000/api/telemetry \
   }'
 ```
 
-Después revisar:
+Este endpoint:
+
+1. Actualiza la información mostrada en el dashboard.
+2. Publica la telemetría en `/conveyor/telemetry`.
+
+---
+
+## Recibir imagen JPEG
+
+```text
+POST /api/frame
+```
+
+Ejemplo:
+
+```bash
+curl -X POST http://localhost:8000/api/frame \
+  -H "Content-Type: image/jpeg" \
+  --data-binary "@/tmp/test_camera.jpg"
+```
+
+---
+
+## Ver stream de video
+
+```text
+GET /video
+```
+
+Abrir en navegador:
+
+```text
+http://localhost:8000/video
+```
+
+---
+
+## Estado del servidor
+
+```text
+GET /api/status
+```
+
+Ejemplo:
+
+```bash
+curl http://localhost:8000/api/status
+```
+
+---
+
+## WebSocket
+
+```text
+WS /ws
+```
+
+Usado por el dashboard para mostrar telemetría en tiempo real.
+
+---
+
+# Pruebas locales sin computadora remota
+
+Estas pruebas permiten validar el dashboard y la simulación sin tener conectada la computadora que controla la banda real.
+
+---
+
+## 1. Probar telemetría falsa
+
+Con el dashboard corriendo:
+
+```bash
+curl -X POST http://localhost:8000/api/telemetry \
+  -H "Content-Type: application/json" \
+  -d '{
+    "state": 7,
+    "error": 0,
+    "freq_cmd_hz": 30.0,
+    "freq_out_hz": 28.5,
+    "current_raw": 6,
+    "timestamp": 123456
+  }'
+```
+
+Verificar que se publique en ROS2:
 
 ```bash
 ros2 topic echo /conveyor/telemetry
@@ -344,7 +507,7 @@ ros2 topic echo /conveyor/telemetry
 
 ---
 
-## Probar comando falso
+## 2. Probar comando falso
 
 ```bash
 curl -X POST http://localhost:8000/cmd \
@@ -352,15 +515,13 @@ curl -X POST http://localhost:8000/cmd \
   -d '{"action":"forward"}'
 ```
 
-Después revisar:
+Verificar que se publique en ROS2:
 
 ```bash
 ros2 topic echo /conveyor/cmd
 ```
 
----
-
-## Ver comandos pendientes para Humble
+Verificar que quede disponible para un servicio remoto:
 
 ```bash
 curl "http://localhost:8000/api/commands?after=0"
@@ -368,9 +529,46 @@ curl "http://localhost:8000/api/commands?after=0"
 
 ---
 
-# Conexión con computadora Humble
+## 3. Probar imagen falsa
 
-Para que Humble pueda conectarse al dashboard, primero obtener la IP de la laptop Jazzy:
+Instalar Pillow si no está instalado:
+
+```bash
+pip install pillow
+```
+
+Crear imagen de prueba:
+
+```bash
+python3 - << 'EOF'
+from PIL import Image, ImageDraw
+
+img = Image.new("RGB", (640, 360), color=(20, 20, 20))
+draw = ImageDraw.Draw(img)
+draw.text((220, 160), "PRUEBA CAMARA", fill=(255, 255, 255))
+img.save("/tmp/test_camera.jpg")
+EOF
+```
+
+Enviar imagen:
+
+```bash
+curl -X POST http://localhost:8000/api/frame \
+  -H "Content-Type: image/jpeg" \
+  --data-binary "@/tmp/test_camera.jpg"
+```
+
+Abrir en navegador:
+
+```text
+http://localhost:8000/video
+```
+
+---
+
+# Conexión desde otra computadora
+
+Para que una computadora remota pueda comunicarse con el dashboard, primero obtén la IP de la laptop:
 
 ```bash
 hostname -I
@@ -382,7 +580,7 @@ Ejemplo:
 192.168.1.70
 ```
 
-La computadora con Humble debe usar esta URL:
+La computadora remota debe conectarse a:
 
 ```text
 http://192.168.1.70:8000
@@ -390,24 +588,7 @@ http://192.168.1.70:8000
 
 ---
 
-# Endpoints disponibles
-
-El dashboard remoto expone:
-
-```text
-GET  /                  Dashboard web
-POST /cmd               Recibe comandos desde el dashboard
-GET  /api/commands      Humble consulta comandos pendientes
-POST /api/telemetry     Humble manda telemetría real
-POST /api/frame         Humble manda imagen JPEG
-GET  /api/status        Estado del servidor
-GET  /video             Streaming MJPEG de cámara
-WS   /ws                Telemetría en tiempo real
-```
-
----
-
-# Cloudflare Tunnel
+# Acceso remoto con Cloudflare
 
 Para exponer el dashboard públicamente:
 
@@ -415,64 +596,102 @@ Para exponer el dashboard públicamente:
 cloudflared tunnel --url http://localhost:8000
 ```
 
-Esto generará una URL pública para acceder al dashboard desde otra red.
+Esto genera una URL pública para acceder al dashboard desde otra red.
 
 ---
 
-# Flujo recomendado de ejecución
+# Solución de problemas
 
-## Terminal 1 — Dashboard remoto
+## Error: externally-managed-environment
+
+Este error aparece cuando se intenta usar `pip` global en Ubuntu 24.
+
+Solución:
 
 ```bash
-cd RUTA/AL/REPOSITORIO_CLONADO
-
+python3 -m venv venv
 source venv/bin/activate
+pip install -r python_requirements.txt
+```
+
+---
+
+## ROS2 no encuentra el paquete
+
+Ejecutar:
+
+```bash
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
+```
 
+Verificar:
+
+```bash
+ros2 pkg list | grep conveyor
+```
+
+---
+
+## Webots no abre
+
+Verificar instalación:
+
+```bash
+webots --version
+```
+
+Verificar paquetes ROS2 Webots:
+
+```bash
+ros2 pkg list | grep webots
+```
+
+---
+
+## El dashboard no abre
+
+Verificar que el proceso esté corriendo:
+
+```bash
+curl http://localhost:8000/api/status
+```
+
+Verificar que no haya otro proceso usando el puerto 8000:
+
+```bash
+sudo lsof -i :8000
+```
+
+---
+
+# Resumen rápido
+
+```bash
+git clone https://github.com/DidierHernandez2/ros2-conveyor-remote-services.git
+cd ros2-conveyor-remote-services
+
+python3 -m venv venv
+source venv/bin/activate
+
+pip install --upgrade pip
+pip install -r python_requirements.txt
+
+source /opt/ros/jazzy/setup.bash
+rosdep install --from-paths src --ignore-src -r -y
+
+colcon build --symlink-install
+source install/setup.bash
+```
+
+Ejecutar dashboard:
+
+```bash
 ros2 launch conveyor_dashboard_remote dashboard_remote.launch.py
 ```
 
----
-
-## Terminal 2 — Simulación Webots
+Ejecutar simulación:
 
 ```bash
-cd RUTA/AL/REPOSITORIO_CLONADO
-
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
 ros2 launch conveyor_sim conveyor_sim.launch.py
 ```
-
----
-
-## Terminal 3 — Monitoreo de telemetría
-
-```bash
-cd RUTA/AL/REPOSITORIO_CLONADO
-
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-
-ros2 topic echo /conveyor/telemetry
-```
-
----
-
-# Notas importantes
-
-- El repositorio clonado funciona como el workspace ROS2.
-- No se debe crear otro workspace aparte.
-- La carpeta `src/` debe estar directamente dentro del repositorio.
-- No usar `pip install` global en Ubuntu 24.
-- Usar siempre el entorno virtual `venv`.
-- Activar ROS2 Jazzy antes de compilar.
-- Activar `install/setup.bash` después de compilar.
-- El dashboard corre en el puerto `8000`.
-- Humble y Jazzy no se comunican por DDS directo.
-- La comunicación Humble/Jazzy se hace por HTTP.
-- Webots funciona como Digital Twin de la banda real.
