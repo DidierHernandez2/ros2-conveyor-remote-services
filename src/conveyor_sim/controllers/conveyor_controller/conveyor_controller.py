@@ -1,75 +1,18 @@
 #!/usr/bin/env python3
 
-import json
-import math
-
 from controller import Supervisor
+import json
+import os
+print("======================================")
+print("CONTROLLER NUEVO CARGADO DESDE conveyor_sim")
+print("MOVIMIENTO FORZADO DE PRUEBA")
+print("======================================")
 
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import String
-
-
-class ConveyorDigitalTwin(Node):
-    def __init__(self):
-        super().__init__("conveyor_digital_twin")
-
-        self.freq_out_hz = 0.0
-        self.direction = 0
-
-        self.mps_per_hz = 0.00625
-
-        self.create_subscription(
-            String,
-            "/conveyor/telemetry",
-            self.telemetry_callback,
-            10,
-        )
-
-        self.create_subscription(
-            String,
-            "/conveyor/cmd",
-            self.cmd_callback,
-            10,
-        )
-
-        self.get_logger().info("Digital twin conectado a /conveyor/telemetry y /conveyor/cmd")
-
-    def telemetry_callback(self, msg):
-        try:
-            data = json.loads(msg.data)
-        except json.JSONDecodeError:
-            return
-
-        self.freq_out_hz = float(data.get("freq_out_hz") or 0.0)
-
-    def cmd_callback(self, msg):
-        try:
-            data = json.loads(msg.data)
-        except json.JSONDecodeError:
-            return
-
-        action = data.get("action")
-
-        if action == "forward":
-            self.direction = 1
-        elif action == "reverse":
-            self.direction = -1
-        elif action in ("stop", "emergency_stop"):
-            self.direction = 0
-
-    def speed_mps(self):
-        return self.direction * self.freq_out_hz * self.mps_per_hz
-
+STATE_FILE = "/home/darhf/conveyor_sim_state.json"
 
 robot = Supervisor()
 timestep = int(robot.getBasicTimeStep())
 
-rclpy.init()
-ros_node = ConveyorDigitalTwin()
-
-roller_start = robot.getFromDef("RODILLO_INICIO")
-roller_end = robot.getFromDef("RODILLO_FINAL")
 box = robot.getFromDef("CAJA")
 
 marks = [
@@ -79,56 +22,90 @@ marks = [
     robot.getFromDef("MARCA_4"),
 ]
 
-roller_angle = 0.0
-roller_radius = 0.05
-
 x_min = -0.65
 x_max = 0.65
+mps_per_hz = 0.00625
+
+freq_out_hz = 0.0
+direction = 0
+state = 4
+error = 0
+
+
+print("[conveyor_controller] Webots controller iniciado")
+print(f"[conveyor_controller] Leyendo estado desde {STATE_FILE}")
+
+if box is None:
+    print("[ERROR] No se encontró DEF CAJA")
+
+for i, mark in enumerate(marks, start=1):
+    if mark is None:
+        print(f"[ERROR] No se encontró DEF MARCA_{i}")
+
+
+def read_state():
+    global freq_out_hz, direction, state, error
+
+    if not os.path.exists(STATE_FILE):
+        return
+
+    try:
+        with open(STATE_FILE, "r") as f:
+            data = json.load(f)
+
+        freq_out_hz = float(data.get("freq_out_hz") or 0.0)
+        direction = int(data.get("direction") or 0)
+        state = int(data.get("state") or 4)
+        error = int(data.get("error") or 0)
+
+    except Exception as e:
+        print(f"[ERROR] Leyendo JSON: {e}")
+
+
+def speed_mps():
+    if error != 0:
+        return 0.0
+
+    if direction == 0:
+        return 0.0
+
+    if abs(freq_out_hz) <= 0.05:
+        return 0.0
+
+    return direction * freq_out_hz * mps_per_hz
+
+
+def move_node_x(node, speed, dt):
+    if node is None:
+        return
+
+    field = node.getField("translation")
+
+    if field is None:
+        print("[ERROR] Nodo sin campo translation")
+        return
+
+    pos = field.getSFVec3f()
+    pos[0] += speed * dt
+
+    if pos[0] > x_max:
+        pos[0] = x_min
+
+    elif pos[0] < x_min:
+        pos[0] = x_max
+
+    field.setSFVec3f(pos)
+
 
 while robot.step(timestep) != -1:
     dt = timestep / 1000.0
 
-    rclpy.spin_once(ros_node, timeout_sec=0.0)
-
-    speed = ros_node.speed_mps()
-
-    omega = speed / roller_radius
-    roller_angle = (roller_angle + omega * dt) % (2.0 * math.pi)
-
-    if roller_start is not None:
-        roller_start.getField("rotation").setSFRotation([0, 1, 0, roller_angle])
-
-    if roller_end is not None:
-        roller_end.getField("rotation").setSFRotation([0, 1, 0, roller_angle])
+    read_state()
+    speed = speed_mps()
 
     for mark in marks:
-        if mark is None:
-            continue
+        move_node_x(mark, speed, dt)
 
-        field = mark.getField("translation")
-        pos = field.getSFVec3f()
-
-        pos[0] += speed * dt
-
-        if pos[0] > x_max:
-            pos[0] = x_min
-        elif pos[0] < x_min:
-            pos[0] = x_max
-
-        field.setSFVec3f(pos)
-
-    if box is not None:
-        box_field = box.getField("translation")
-        box_pos = box_field.getSFVec3f()
-
-        box_pos[0] += speed * dt
-
-        if box_pos[0] > x_max:
-            box_pos[0] = x_min
-        elif box_pos[0] < x_min:
-            box_pos[0] = x_max
-
-        box_field.setSFVec3f(box_pos)
-
-ros_node.destroy_node()
-rclpy.shutdown()
+    move_node_x(box, speed, dt)
+    if int(robot.getTime()) % 2 == 0:
+        print(f"[SIM] freq={freq_out_hz}, dir={direction}, state={state}, error={error}, speed={speed}")

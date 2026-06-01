@@ -20,7 +20,6 @@ setup(
     maintainer_email="didier.hernandez1972@gmail.com",
     description="YOLO object detector for ROS2 Jazzy using /camera/image_raw",
     license="Apache-2.0",
-    tests_require=["pytest"],
     entry_points={
         "console_scripts": [
             "yolo_detector_node = yolo_detector.yolo_detector_node:main",

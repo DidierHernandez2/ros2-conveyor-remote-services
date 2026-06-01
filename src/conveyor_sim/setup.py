@@ -21,10 +21,12 @@ setup(
     install_requires=["setuptools"],
     zip_safe=True,
     maintainer="darhf",
-    maintainer_email="didier.hernandez1972@gmail.com",
-    description="Simulación Webots tipo digital twin para conveyor",
+    maintainer_email="darhf@example.com",
+    description="Webots conveyor visualizer using telemetry from dashboard",
     license="Apache-2.0",
     entry_points={
-        "console_scripts": [],
+        "console_scripts": [
+            "conveyor_sim_node = conveyor_sim.conveyor_sim_node:main",
+        ],
     },
 )

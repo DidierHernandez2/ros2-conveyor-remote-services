@@ -1,28 +1,42 @@
-import os
-
 from launch import LaunchDescription
-from launch.actions import SetEnvironmentVariable
-from launch_ros.substitutions import FindPackageShare
-from launch.substitutions import PathJoinSubstitution
+from launch.actions import ExecuteProcess
+from launch_ros.actions import Node
 
-from webots_ros2_driver.webots_launcher import WebotsLauncher
+from ament_index_python.packages import get_package_share_directory
+import os
 
 
 def generate_launch_description():
-    world = PathJoinSubstitution([
-        FindPackageShare("conveyor_sim"),
-        "worlds",
-        "conveyor_world.wbt",
-    ])
 
-    webots = WebotsLauncher(
-        world=world,
+    package_dir = get_package_share_directory("conveyor_sim")
+
+    world_path = os.path.join(
+        package_dir,
+        "worlds",
+        "conveyor_world.wbt"
+    )
+
+    webots = ExecuteProcess(
+        cmd=[
+            "webots",
+            world_path,
+        ],
+        output="screen"
+    )
+
+    conveyor_sim = Node(
+        package="conveyor_sim",
+        executable="conveyor_sim_node",
+        name="conveyor_sim_node",
+        output="screen",
+        parameters=[
+            {
+                "telemetry_topic": "/conveyor/telemetry"
+            }
+        ]
     )
 
     return LaunchDescription([
-        SetEnvironmentVariable(
-            name="WEBOTS_CONTROLLER_URL_PREFIX",
-            value="",
-        ),
         webots,
+        conveyor_sim,
     ])
