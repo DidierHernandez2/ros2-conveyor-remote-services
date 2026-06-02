@@ -27,6 +27,7 @@ setup(
 		'face_recognition_node = face_recognition_pkg.face_recognition_node:main',
 		'register_faces_offline = face_recognition_pkg.register_faces_offline:main',
 		'preprocess_faces = face_recognition_pkg.preprocess_faces:main',
+		'face_auth_node = face_recognition_pkg.face_auth_node:main',
         ],
     },
 )

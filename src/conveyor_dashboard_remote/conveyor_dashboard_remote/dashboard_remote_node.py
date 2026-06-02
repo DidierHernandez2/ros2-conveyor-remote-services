@@ -22,6 +22,13 @@ ros_node = None
 latest_telemetry = {}
 latest_lidar = {}
 latest_yolo = {}
+latest_face_role = {
+    "role": "none",
+    "name": "none",
+    "confidence": 0.0,
+    "face_detected": False,
+    "timestamp": 0.0,
+}
 latest_frame = None
 latest_yolo_frame = None
 
@@ -55,7 +62,14 @@ class DashboardRemoteNode(Node):
             self.lidar_callback,
             10,
         )
+        self.face_role_sub = self.create_subscription(
+            String,
+            "/auth/face_role",
+            self.face_role_callback,
+            10,
+        )
 
+        self.get_logger().info("Suscrito a /auth/face_role")
         self.get_logger().info("Dashboard remoto Jazzy iniciado")
         self.get_logger().info("Publicando comandos locales en /conveyor/cmd")
         self.get_logger().info("Publicando imagen remota en /camera/image/compressed")
@@ -95,6 +109,13 @@ class DashboardRemoteNode(Node):
             latest_lidar = json.loads(msg.data)
         except Exception as e:
             self.get_logger().warn(f"LiDAR inválido en /lidar/distance: {e}")
+    def face_role_callback(self, msg: String):
+        global latest_face_role
+
+        try:
+            latest_face_role = json.loads(msg.data)
+        except Exception as e:
+            self.get_logger().warn(f"Face role inválido en /auth/face_role: {e}")
 
 
 HTML = """
@@ -707,12 +728,30 @@ async def status():
         "latest_telemetry": latest_telemetry,
         "latest_lidar": latest_lidar,
         "latest_yolo": latest_yolo,
+        "latest_face_role": latest_face_role,
         "has_frame": latest_frame is not None,
         "has_yolo_frame": latest_yolo_frame is not None,
         "latest_command_seq": command_seq,
     }
 
+@app.post("/api/face_role")
+async def receive_face_role(data: dict):
+    global latest_face_role
 
+    latest_face_role = data
+
+    return {
+        "ok": True,
+        "received": latest_face_role,
+    }
+
+
+@app.get("/api/face_role")
+async def get_face_role():
+    return {
+        "ok": True,
+        "latest_face_role": latest_face_role,
+    }
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -723,6 +762,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "telemetry": latest_telemetry,
                 "lidar": latest_lidar,
                 "yolo": latest_yolo,
+                "face_role": latest_face_role,
                 "has_frame": latest_frame is not None,
                 "has_yolo_frame": latest_yolo_frame is not None,
                 "latest_command_seq": command_seq,
